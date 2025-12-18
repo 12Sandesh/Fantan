@@ -1,0 +1,7 @@
+images {
+  image: "/assests/background/bg.png"
+}
+images {
+  image: "/assests/background/dropzone.png"
+}
+extrude_borders: 2

@@ -1,0 +1,160 @@
+images {
+  image: "/assests/cards/1C.png"
+}
+images {
+  image: "/assests/cards/1D.png"
+}
+images {
+  image: "/assests/cards/1H.png"
+}
+images {
+  image: "/assests/cards/1S.png"
+}
+images {
+  image: "/assests/cards/2C.png"
+}
+images {
+  image: "/assests/cards/2D.png"
+}
+images {
+  image: "/assests/cards/2H.png"
+}
+images {
+  image: "/assests/cards/2S.png"
+}
+images {
+  image: "/assests/cards/3C.png"
+}
+images {
+  image: "/assests/cards/3D.png"
+}
+images {
+  image: "/assests/cards/3H.png"
+}
+images {
+  image: "/assests/cards/3S.png"
+}
+images {
+  image: "/assests/cards/4C.png"
+}
+images {
+  image: "/assests/cards/4D.png"
+}
+images {
+  image: "/assests/cards/4H.png"
+}
+images {
+  image: "/assests/cards/4S.png"
+}
+images {
+  image: "/assests/cards/5C.png"
+}
+images {
+  image: "/assests/cards/5D.png"
+}
+images {
+  image: "/assests/cards/5H.png"
+}
+images {
+  image: "/assests/cards/5S.png"
+}
+images {
+  image: "/assests/cards/6C.png"
+}
+images {
+  image: "/assests/cards/6D.png"
+}
+images {
+  image: "/assests/cards/6H.png"
+}
+images {
+  image: "/assests/cards/6S.png"
+}
+images {
+  image: "/assests/cards/7C.png"
+}
+images {
+  image: "/assests/cards/7D.png"
+}
+images {
+  image: "/assests/cards/7H.png"
+}
+images {
+  image: "/assests/cards/7S.png"
+}
+images {
+  image: "/assests/cards/8C.png"
+}
+images {
+  image: "/assests/cards/8D.png"
+}
+images {
+  image: "/assests/cards/8H.png"
+}
+images {
+  image: "/assests/cards/8S.png"
+}
+images {
+  image: "/assests/cards/9C.png"
+}
+images {
+  image: "/assests/cards/9D.png"
+}
+images {
+  image: "/assests/cards/9H.png"
+}
+images {
+  image: "/assests/cards/9S.png"
+}
+images {
+  image: "/assests/cards/back.png"
+}
+images {
+  image: "/assests/cards/JC.png"
+}
+images {
+  image: "/assests/cards/JD.png"
+}
+images {
+  image: "/assests/cards/JH.png"
+}
+images {
+  image: "/assests/cards/JS.png"
+}
+images {
+  image: "/assests/cards/KC.png"
+}
+images {
+  image: "/assests/cards/KD.png"
+}
+images {
+  image: "/assests/cards/KH.png"
+}
+images {
+  image: "/assests/cards/KS.png"
+}
+images {
+  image: "/assests/cards/QC.png"
+}
+images {
+  image: "/assests/cards/QD.png"
+}
+images {
+  image: "/assests/cards/QH.png"
+}
+images {
+  image: "/assests/cards/QS.png"
+}
+images {
+  image: "/assests/cards/TC.png"
+}
+images {
+  image: "/assests/cards/TD.png"
+}
+images {
+  image: "/assests/cards/TH.png"
+}
+images {
+  image: "/assests/cards/TS.png"
+}
+extrude_borders: 2

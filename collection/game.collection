@@ -1,0 +1,143 @@
+name: "game"
+instances {
+  id: "dropzone1"
+  prototype: "/game_object/dropzone.go"
+  children: "textbox1"
+  position {
+    x: 270.0
+    y: 275.0
+  }
+}
+instances {
+  id: "dropzone2"
+  prototype: "/game_object/dropzone.go"
+  children: "textbox2"
+  position {
+    x: 410.33
+    y: 275.0
+  }
+}
+instances {
+  id: "dropzone3"
+  prototype: "/game_object/dropzone.go"
+  children: "textbox3"
+  position {
+    x: 550.67
+    y: 275.0
+  }
+}
+instances {
+  id: "dropzone4"
+  prototype: "/game_object/dropzone.go"
+  children: "textbox4"
+  position {
+    x: 691.0
+    y: 275.0
+  }
+}
+collection_instances {
+  id: "background"
+  collection: "/collection/background.collection"
+  position {
+    x: 480.0
+    y: 320.0
+  }
+  scale3 {
+    x: 0.7
+    y: 0.7
+    z: 0.7
+  }
+}
+scale_along_z: 0
+embedded_instances {
+  id: "dealer_go"
+  data: "components {\n"
+  "  id: \"dealer\"\n"
+  "  component: \"/scripts/dealer.script\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"card_factory\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/game_object/card.go\\\"\\n"
+  "\"\n"
+  "}\n"
+  ""
+  position {
+    x: 480.0
+    y: 320.0
+  }
+}
+embedded_instances {
+  id: "textbox1"
+  data: "embedded_components {\n"
+  "  id: \"text\"\n"
+  "  type: \"label\"\n"
+  "  data: \"size {\\n"
+  "  x: 48.0\\n"
+  "  y: 49.0\\n"
+  "}\\n"
+  "text: \\\"Heart\\\\n"
+  "\\\"\\n"
+  "  \\\"\\\\n"
+  "\\\"\\n"
+  "  \\\"\\\"\\n"
+  "font: \\\"/builtins/fonts/default.font\\\"\\n"
+  "material: \\\"/builtins/fonts/label-df.material\\\"\\n"
+  "\"\n"
+  "}\n"
+  ""
+}
+embedded_instances {
+  id: "textbox2"
+  data: "embedded_components {\n"
+  "  id: \"text\"\n"
+  "  type: \"label\"\n"
+  "  data: \"size {\\n"
+  "  x: 48.0\\n"
+  "  y: 49.0\\n"
+  "}\\n"
+  "text: \\\"Diamond\\\\n"
+  "\\\"\\n"
+  "  \\\"\\\"\\n"
+  "font: \\\"/builtins/fonts/default.font\\\"\\n"
+  "material: \\\"/builtins/fonts/label-df.material\\\"\\n"
+  "\"\n"
+  "}\n"
+  ""
+}
+embedded_instances {
+  id: "textbox3"
+  data: "embedded_components {\n"
+  "  id: \"text\"\n"
+  "  type: \"label\"\n"
+  "  data: \"size {\\n"
+  "  x: 48.0\\n"
+  "  y: 49.0\\n"
+  "}\\n"
+  "text: \\\"Spade\\\\n"
+  "\\\"\\n"
+  "  \\\"\\\"\\n"
+  "font: \\\"/builtins/fonts/default.font\\\"\\n"
+  "material: \\\"/builtins/fonts/label-df.material\\\"\\n"
+  "\"\n"
+  "}\n"
+  ""
+}
+embedded_instances {
+  id: "textbox4"
+  data: "embedded_components {\n"
+  "  id: \"text\"\n"
+  "  type: \"label\"\n"
+  "  data: \"size {\\n"
+  "  x: 48.0\\n"
+  "  y: 49.0\\n"
+  "}\\n"
+  "text: \\\"Club\\\\n"
+  "\\\"\\n"
+  "  \\\"\\\"\\n"
+  "font: \\\"/builtins/fonts/default.font\\\"\\n"
+  "material: \\\"/builtins/fonts/label-df.material\\\"\\n"
+  "\"\n"
+  "}\n"
+  ""
+}

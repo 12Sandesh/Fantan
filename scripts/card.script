@@ -1,0 +1,22 @@
+go.property("isDraggable", false) -- Default to false
+
+function init(self)
+    self.isDraggable = false -- Ensure it starts as not draggable
+end
+
+function on_message(self, message_id, message, sender)
+    if message_id == hash("set_card") then
+        -- Store card properties
+        self.card_rank = message.rank
+        self.isDraggable = message.is_draggable or false
+        
+        -- Set the card face immediately
+        if message.face_up then
+            -- Show the actual card face for player cards
+            sprite.play_flipbook("#sprite", hash(message.rank))
+        else
+            -- Show back for opponent cards
+            sprite.play_flipbook("#sprite", hash("back"))
+        end
+    end
+end

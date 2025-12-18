@@ -1,0 +1,26 @@
+[bootstrap]
+main_collection = /main/main.collectionc
+
+[script]
+shared_state = 1
+
+[display]
+width = 960
+height = 640
+high_dpi = 1
+
+[android]
+input_method = HiddenInputField
+
+[html5]
+scale_mode = stretch
+
+[project]
+title = Fantan
+dependencies#0 = https://github.com/britzl/defold-input/archive/master.zip
+dependencies#1 = https://github.com/Insality/druid/archive/refs/tags/1.1.6.zip
+dependencies#2 = https://github.com/Insality/defold-event/archive/refs/tags/12.zip
+
+[physics]
+gravity_y = 0.0
+

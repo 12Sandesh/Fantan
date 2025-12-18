@@ -1,0 +1,50 @@
+function init(self)
+
+end
+
+function final(self)
+
+end
+
+function update(self, dt)
+
+end
+
+function fixed_update(self, dt)
+
+end
+
+
+function on_message(self, message_id, message, sender)
+    if message_id == hash("load_level") then
+        print("Loader received request. Starting load...")
+        msg.post("#game", "load")
+        
+    elseif message_id == hash("proxy_loaded") then
+        print("Level files loaded! Enabling now...")
+        
+        -- 1. Initialize the collection
+        msg.post(sender, "init")
+        
+        -- 2. Make it visible
+        msg.post(sender, "enable")
+        
+        -- 3. CRITICAL: Tell the new collection to listen for input
+        -- If you don't do this, you can't click anything in the new level
+        msg.post(sender, "acquire_input_focus")
+
+		timer.delay(1, false, function ()
+			msg.post("game:/dealer_go#dealer", "start_dealing")
+		end)
+
+    end
+end 	
+
+
+function on_input(self, action_id, action)
+
+end
+
+function on_reload(self)
+
+end

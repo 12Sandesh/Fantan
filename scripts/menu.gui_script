@@ -1,0 +1,45 @@
+local druid = require("druid.druid")
+
+-- This function triggers when the button is clicked
+local function start_game(self)
+	print("Start Game Triggered")
+	print("Requesting level load...")
+
+	-- 1. Disable the button so it can't be clicked twice
+	gui.set_enabled(gui.get_node("start_button"), false)
+
+	-- 2. Optionally hide the whole GUI root if the menu is done
+	gui.set_enabled(gui.get_node("root"), false)
+
+	-- 3. Tell your game objects to start spawning/moving
+	msg.post("main:/loader#loader", "load_level")
+end
+
+function init(self)
+	-- Important: You still need to acquire input focus for the GO
+	msg.post(".", "acquire_input_focus")
+
+	self.druid = druid.new(self)
+
+	-- Create the button logic
+	-- Druid looks for the node named "start_button" automatically
+	self.button = self.druid:new_button("start_button", start_game)
+end
+
+function final(self)
+	self.druid:final()
+end
+
+function update(self, dt)
+	self.druid:update(dt)
+end
+
+function on_message(self, message_id, message, sender)
+	self.druid:on_message(message_id, message, sender)
+end
+
+function on_input(self, action_id, action)
+	-- Druid returns true if it consumed the input, 
+	-- preventing it from "clicking through" to objects behind the UI
+	return self.druid:on_input(action_id, action)
+end

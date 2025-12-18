@@ -1,0 +1,74 @@
+script: "/scripts/menu.gui_script"
+fonts {
+  name: "always_on_top"
+  font: "/builtins/fonts/debug/always_on_top.font"
+}
+nodes {
+  position {
+    x: 480.0
+    y: 320.0
+  }
+  scale {
+    x: 0.7
+    y: 0.7
+  }
+  size {
+    x: 200.0
+    y: 100.0
+  }
+  type: TYPE_BOX
+  id: "root"
+  adjust_mode: ADJUST_MODE_STRETCH
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+  visible: false
+}
+nodes {
+  size {
+    x: 30.0
+    y: 30.0
+    z: 30.0
+  }
+  type: TYPE_BOX
+  id: "center_anchor"
+  adjust_mode: ADJUST_MODE_STRETCH
+  parent: "root"
+  inherit_alpha: true
+  visible: false
+}
+nodes {
+  scale {
+    x: 1.5
+    y: 1.5
+    z: 1.5
+  }
+  size {
+    x: 100.0
+    y: 64.0
+  }
+  type: TYPE_BOX
+  id: "start_button"
+  parent: "center_anchor"
+  inherit_alpha: true
+  slice9 {
+    x: 32.0
+    y: 32.0
+    z: 32.0
+    w: 32.0
+  }
+}
+nodes {
+  color {
+    x: 0.0
+    y: 0.0
+    z: 0.502
+  }
+  type: TYPE_TEXT
+  text: "PLAY"
+  font: "always_on_top"
+  id: "text"
+  parent: "start_button"
+  inherit_alpha: true
+}
+material: "/builtins/materials/gui.material"
+adjust_reference: ADJUST_REFERENCE_PARENT
