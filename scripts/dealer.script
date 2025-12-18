@@ -5,12 +5,11 @@ local DECK = {
     "7C", "7D", "7H", "7S", "8C", "8D", "8H", "8S",
     "9C", "9D", "9H", "9S", "10C", "10D", "10H", "10S",
     "JC", "JD", "JH", "JS", "QC", "QD", "QH", "QS",
-    "KC", "KD", "KH", "KS" 
+    "KC", "KD", "KH", "KS"
 }
 
--- Shuffle function to randomize a copy of the table
 local function shuffle_deck(deck)
-    math.randomseed(os.time() * tonumber(tostring({}):sub(8))) -- Better seeding
+    math.randomseed(os.time() * tonumber(tostring({}):sub(8)))
     for i = #deck, 2, -1 do
         local j = math.random(i)
         deck[i], deck[j] = deck[j], deck[i]
@@ -19,29 +18,30 @@ local function shuffle_deck(deck)
 end
 
 local function deal_cards(self)
-    -- Create a copy of the deck and shuffle it
     local shuffled_deck = {}
     for i, card in ipairs(DECK) do
         shuffled_deck[i] = card
     end
     shuffle_deck(shuffled_deck)
-    
+
     local card_index = 1
     local center = vmath.vector3(480, 320, 0.6)
 
     local targets = {
+
         -- Player (Bottom): face_up = true
-        { pos = vmath.vector3(480, 60, 0.5),   dir = "horizontal", face_up = true,  is_opponent = false, base_rot = 0,   side = 1 },
+        { pos = vmath.vector3(480, 60, 0.5),  dir = "horizontal", face_up = true,  is_opponent = false, base_rot = 0,   side = 1 },
         -- Left Opponent: face_up = false
-        { pos = vmath.vector3(100, 400, 0.5),  dir = "vertical",   face_up = false, is_opponent = true,  base_rot = 30,  side = -1 },
+        { pos = vmath.vector3(150, 500, 0.5), dir = "vertical",   face_up = false, is_opponent = true,  base_rot = 90,  side = -1 },
         -- Right Opponent: face_up = false
-        { pos = vmath.vector3(860, 400, 0.5),  dir = "vertical",   face_up = false, is_opponent = true,  base_rot = -30, side = 1 }
+        { pos = vmath.vector3(810, 500, 0.5), dir = "vertical",   face_up = false, is_opponent = true,  base_rot = -90, side = 1 }
+
     }
 
     local cards_per_player = 17
     local card_count = 0
     local spread_player = 25
-    local spread_opponent = 20 
+    local spread_opponent = 20
 
     for round = 1, cards_per_player do
         for i, config in ipairs(targets) do
@@ -49,41 +49,47 @@ local function deal_cards(self)
             if card_index <= #shuffled_deck then
                 card_count = card_count + 1
                 local delay = card_count * 0.06
-
                 local step = (round - (cards_per_player / 2 + 0.5))
                 local final_pos = vmath.vector3(config.pos)
                 local final_tilt = config.base_rot
-                
+
                 -- Pull the current card ID from the shuffled deck
                 local current_rank = shuffled_deck[card_index]
                 card_index = card_index + 1
-
                 if not config.is_opponent then
                     -- PLAYER: Straight flat line
                     final_pos.x = final_pos.x + (step * spread_player)
                 else
-                    -- OPPONENTS: Vertical Curve logic
-                    local linear_offset = step * spread_opponent
-                    local curve_offset = (step * step) * 1.5
+                    -- OPPONENT SIDE LOGIC: Small, tight vertical fan
+                    local tight_spread = 10 -- Reduced from 18 for a smaller, compact look
+                    local linear_offset = -(step * tight_spread)
+                    local curve_depth = 0.8 -- How much the semi-circle bows inward
 
                     final_pos.y = final_pos.y + linear_offset
-                    final_pos.x = final_pos.x + (curve_offset * config.side)
-                    final_tilt = config.base_rot + (step * 4)
+                    final_pos.x = final_pos.x + ((step * step) * curve_depth * config.side) -- Subtle arc
+
+                    final_tilt = config.base_rot + (step * 10 * config.side)
+
+                    -- Scaling: Make the opponent cards smaller overall (e.g., 60% of player size)
+                    local base_scale = 0.6
+                    local perspective_shrink = base_scale - (math.abs(step) * 0.005)
+                    final_scale = vmath.vector3(perspective_shrink, perspective_shrink, 1)
+
+                    -- Z-Layering: Ensure cards overlap correctly (top cards behind bottom cards or vice versa)
+                    final_pos.z = config.pos.z + (round * 0.001)
                 end
 
                 -- Create card from factory
                 local card = factory.create("#card_factory", center)
-
                 -- Set card properties immediately with correct face orientation
                 msg.post(card, "set_card", {
-                    face_up = config.face_up, -- Player cards: true, Opponent cards: false
+                    face_up = config.face_up,             -- Player cards: true, Opponent cards: false
                     rank = current_rank,
                     is_draggable = not config.is_opponent -- Only player cards are draggable
                 })
 
                 -- Animate to position
                 go.animate(card, "position", go.PLAYBACK_ONCE_FORWARD, final_pos, go.EASING_OUTQUAD, 0.5, delay)
-
                 -- Animate rotation
                 go.animate(card, "euler.z", go.PLAYBACK_ONCE_FORWARD, final_tilt, go.EASING_OUTQUAD, 0.5, delay)
             end
