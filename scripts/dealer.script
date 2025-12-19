@@ -32,16 +32,16 @@ local function deal_cards(self)
         -- Player (Bottom): face_up = true
         { pos = vmath.vector3(480, 60, 0.5),  dir = "horizontal", face_up = true,  is_opponent = false, base_rot = 0,   side = 1 },
         -- Left Opponent: face_up = false
-        { pos = vmath.vector3(150, 500, 0.5), dir = "vertical",   face_up = false, is_opponent = true,  base_rot = 90,  side = -1 },
+        { pos = vmath.vector3(120, 550, 0.5), dir = "vertical",   face_up = false, is_opponent = true,  base_rot = -90, side = -1 },
         -- Right Opponent: face_up = false
-        { pos = vmath.vector3(810, 500, 0.5), dir = "vertical",   face_up = false, is_opponent = true,  base_rot = -90, side = 1 }
+        { pos = vmath.vector3(830, 550, 0.5), dir = "vertical",   face_up = false, is_opponent = true,  base_rot = 90,  side = 1 }
 
     }
 
     local cards_per_player = 17
     local card_count = 0
     local spread_player = 25
-    local spread_opponent = 20
+
 
     for round = 1, cards_per_player do
         for i, config in ipairs(targets) do
@@ -60,22 +60,36 @@ local function deal_cards(self)
                     -- PLAYER: Straight flat line
                     final_pos.x = final_pos.x + (step * spread_player)
                 else
-                    -- OPPONENT SIDE LOGIC: Small, tight vertical fan
-                    local tight_spread = 10 -- Reduced from 18 for a smaller, compact look
-                    local linear_offset = -(step * tight_spread)
-                    local curve_depth = 0.8 -- How much the semi-circle bows inward
+                    -- OPPONENT FAN (true arc-based fan)
 
-                    final_pos.y = final_pos.y + linear_offset
-                    final_pos.x = final_pos.x + ((step * step) * curve_depth * config.side) -- Subtle arc
+                    local fan_radius = 110         -- size of the fan
+                    local fan_angle = math.rad(60) -- total fan spread
+                    local t = step / (cards_per_player / 2)
 
-                    final_tilt = config.base_rot + (step * 10 * config.side)
+                    -- angle for this card
+                    local theta = t * fan_angle
 
-                    -- Scaling: Make the opponent cards smaller overall (e.g., 60% of player size)
-                    local base_scale = 0.6
-                    local perspective_shrink = base_scale - (math.abs(step) * 0.005)
-                    final_scale = vmath.vector3(perspective_shrink, perspective_shrink, 1)
+                    -- base direction
+                    local base_angle
+                    if config.side == 1 then
+                        -- Right opponent (keep exactly as it is)
+                        base_angle = math.rad(245)
+                    else
+                        -- Left opponent (mirrored)
+                        base_angle = math.rad(295)
+                    end
 
-                    -- Z-Layering: Ensure cards overlap correctly (top cards behind bottom cards or vice versa)
+                    -- final angle
+                    local angle = base_angle + theta * config.side
+
+                    -- position on arc
+                    final_pos.x = final_pos.x + math.cos(angle) * fan_radius
+                    final_pos.y = final_pos.y + math.sin(angle) * fan_radius
+
+                    -- rotate card to follow arc
+                    final_tilt = math.deg(angle) + 90
+
+                    -- Z layering
                     final_pos.z = config.pos.z + (round * 0.001)
                 end
 
