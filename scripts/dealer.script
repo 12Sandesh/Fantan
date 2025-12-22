@@ -3,19 +3,19 @@ local DECK = {
     "3C", "3D", "3H", "3S", "4C", "4D", "4H", "4S",
     "5C", "5D", "5H", "5S", "6C", "6D", "6H", "6S",
     "7C", "7D", "7H", "7S", "8C", "8D", "8H", "8S",
-    "9C", "9D", "9H", "9S", "10C", "10D", "10H", "10S",
+    "9C", "9D", "9H", "9S", "TC", "TD", "TH", "TS",
     "JC", "JD", "JH", "JS", "QC", "QD", "QH", "QS",
     "KC", "KD", "KH", "KS"
 }
 
 local function shuffle_deck(deck)
-    math.randomseed(os.time() * tonumber(tostring({}):sub(8)))
     for i = #deck, 2, -1 do
         local j = math.random(i)
         deck[i], deck[j] = deck[j], deck[i]
     end
     return deck
 end
+
 
 local function deal_cards(self)
     local shuffled_deck = {}
@@ -112,9 +112,9 @@ local function deal_cards(self)
 end
 
 function init(self)
-    -- Optional: Initialize random seed once
-    math.randomseed(os.time())
+    math.randomseed(os.time() + socket.gettime() * 1000)
 end
+
 
 function on_message(self, message_id, message, sender)
     if message_id == hash("start_dealing") then

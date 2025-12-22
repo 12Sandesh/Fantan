@@ -4,7 +4,6 @@ local game_manager = "/game_manager#game_manager"
 local dropzone_bounds = {}
 
 function init(self)
-	--if the cursor doesn't already have input focus, assign it input focus, and forward any input messages to be parsed by the on_message function
 	if not go.get("#cursor", "acquire_input_focus") then
 		self.forward_input = true
 		msg.post(".", "acquire_input_focus")
@@ -21,14 +20,11 @@ function init(self)
 		if message.group == hash("playerCard") then
 			-- Only allow dragging player cards if can_drag_card is true
 			if can_drag_card == false then
-				return true  -- Return true to prevent dragging
+				return true -- Return true to prevent dragging
 			end
-			return false  -- Return false to allow dragging
-		elseif message.group == hash("opponentCard") then
+			return false -- Return false to allow dragging
+		elseif message.group == hash("opponentCard") or message.group == hash("dropzone") then
 			-- Never allow dragging opponent cards
-			return true
-		elseif message.group == hash("dropzone") then
-			--prevent dragging of dropzones
 			return true
 		end
 
@@ -46,6 +42,12 @@ end
 --listen for type of user input
 function on_message(self, message_id, message, sender)
 	if message_id == cursor.OVER then
+		if message.group == hash("playerCard") then
+			local z_pos = go.get(game_manager, "zPosition")
+			local p = go.get_position(message.id)
+			go.set_position(vmath.vector3(p.x, p.y, z_pos), message.id)
+			go.set(game_manager, "zPosition", z_pos + 0.01)
+		end
 		--track when the cursor enters over the dropzone
 		if message.group == hash("dropzone") then
 			self.over_dropzone = true
@@ -89,7 +91,6 @@ function on_message(self, message_id, message, sender)
 				height = dropzone_size.y
 			}
 		end
-
 	elseif message_id == cursor.OUT then
 		--track when the cursor leaves over the dropzone
 		if message.group == hash("dropzone") then
@@ -100,14 +101,17 @@ function on_message(self, message_id, message, sender)
 				dropzone_bounds = {}
 			end
 		end
-
 	elseif message_id == cursor.PRESSED then
-		--track when the cursor presses on a card
 		if message.group == hash("playerCard") or message.group == hash("opponentCard") then
-			-- Try to get is_draggable property from the card
+			-- 1. BRING TO FRONT IMMEDIATELY ON PRESS
+			local z_pos = go.get(game_manager, "zPosition")
+			local current_pos = go.get_position(message.id)
+			go.set_position(vmath.vector3(current_pos.x, current_pos.y, z_pos), message.id)
+			go.set(game_manager, "zPosition", (z_pos + 0.01))
+
+			-- 2. Your existing draggable logic
 			local url = msg.url(message.id)
 			url.fragment = "card"
-
 			local success, is_draggable = pcall(function()
 				return go.get(url, "isDraggable")
 			end)
@@ -115,20 +119,16 @@ function on_message(self, message_id, message, sender)
 			if success then
 				can_drag_card = is_draggable
 			else
-				-- If property doesn't exist or error, default to true for player cards
 				can_drag_card = (message.group == hash("playerCard"))
 			end
 		end
-
 	elseif message_id == cursor.RELEASED then
 		if message.group == hash("playerCard") or message.group == hash("opponentCard") then
 			can_drag_card = false
 			self.dragging_card = nil
 		end
-
 	elseif message_id == cursor.CLICKED then
 		-- Handle click events if needed
-
 	elseif message_id == cursor.DRAG_START then
 		self.dragging_card = message.id
 
@@ -138,15 +138,14 @@ function on_message(self, message_id, message, sender)
 		go.set_position(vmath.vector3(current_pos.x, current_pos.y, z_pos), message.id)
 		-- increment the current zPosition in the game_manager
 		go.set(game_manager, "zPosition", (z_pos + 0.01))
-
 	elseif message_id == cursor.DRAG_END then
 		-- Check if the card position is within dropzone bounds
 		local in_dropzone = false
 		if dropzone_bounds.id then
-			in_dropzone = message.x >= dropzone_bounds.left and 
-			message.x <= dropzone_bounds.right and
-			message.y >= dropzone_bounds.bottom and 
-			message.y <= dropzone_bounds.top
+			in_dropzone = message.x >= dropzone_bounds.left and
+				message.x <= dropzone_bounds.right and
+				message.y >= dropzone_bounds.bottom and
+				message.y <= dropzone_bounds.top
 		end
 
 		local is_player_card = (message.group == hash("playerCard"))
@@ -162,7 +161,7 @@ function on_message(self, message_id, message, sender)
 			-- Calculate spacing - cards should be spread across the dropzone width
 			local total_cards = cards_in_dropzone + 1
 			local card_width = 80  -- Approximate card width, adjust based on your card size
-			local spacing = card_width + 20  -- Add 20 pixels spacing between cards
+			local spacing = card_width + 20 -- Add 20 pixels spacing between cards
 
 			-- Calculate starting X position to center all cards
 			local total_width = (total_cards * card_width) + ((total_cards - 1) * 20)
@@ -187,11 +186,9 @@ function on_message(self, message_id, message, sender)
 			go.set(game_manager, "cardsPlayed", total_cards)
 			go.set(game_manager, "zPosition", z_pos + 0.01)
 
-			msg.post("/client#client", "drop")
 		end
 
 		self.dragging_card = nil
-
 	elseif message_id == cursor.DRAG then
 		-- Drag movement happens here
 	end

@@ -12,6 +12,10 @@ embedded_components {
   "  texture: \"/atlas/background.atlas\"\n"
   "}\n"
   ""
+  scale {
+    x: 1.4
+    y: 2.0
+  }
 }
 embedded_components {
   id: "collisionobject"
@@ -20,8 +24,9 @@ embedded_components {
   "mass: 0.0\n"
   "friction: 0.1\n"
   "restitution: 0.5\n"
-  "group: \"default\"\n"
-  "mask: \"default\"\n"
+  "group: \"dropzone\"\n"
+  "mask: \"card\"\n"
+  "mask: \"cursor\"\n"
   "embedded_collision_shape {\n"
   "  shapes {\n"
   "    shape_type: TYPE_BOX\n"
@@ -33,8 +38,8 @@ embedded_components {
   "    count: 3\n"
   "    id: \"dropzone_collider\"\n"
   "  }\n"
-  "  data: 24.5\n"
-  "  data: 24.5\n"
+  "  data: 25.0\n"
+  "  data: 25.0\n"
   "  data: 24.5\n"
   "}\n"
   ""
