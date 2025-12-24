@@ -97,9 +97,10 @@ local function deal_cards(self)
                 local card = factory.create("#card_factory", center)
                 -- Set card properties immediately with correct face orientation
                 msg.post(card, "set_card", {
-                    face_up = config.face_up,             -- Player cards: true, Opponent cards: false
+                    face_up = config.face_up,              -- Player cards: true, Opponent cards: false
                     rank = current_rank,
-                    is_draggable = not config.is_opponent -- Only player cards are draggable
+                    is_draggable = not config.is_opponent, -- Only player cards are draggable
+                    owner = i
                 })
 
                 -- Animate to position
@@ -114,7 +115,6 @@ end
 function init(self)
     math.randomseed(os.time() + socket.gettime() * 1000)
 end
-
 
 function on_message(self, message_id, message, sender)
     if message_id == hash("start_dealing") then

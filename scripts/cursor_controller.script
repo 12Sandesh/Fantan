@@ -3,6 +3,9 @@ local can_drag_card = false
 local game_manager = "/game_manager#game_manager"
 local dropzone_bounds = {}
 
+-- The local player's ID (the human player controlling this device)
+local LOCAL_PLAYER_ID = 1  -- Change this to match your local player's ID
+
 function init(self)
 	if not go.get("#cursor", "acquire_input_focus") then
 		self.forward_input = true
@@ -16,19 +19,123 @@ function init(self)
 
 	--listen for cursor drag input
 	cursor.listen(msg.url("#cursor"), cursor.DRAG_START, function(message_id, message)
-		--determine whether card should be draggable based on their group
-		if message.group == hash("playerCard") then
-			-- Only allow dragging player cards if can_drag_card is true
-			if can_drag_card == false then
-				return true -- Return true to prevent dragging
+		print("\n=== DRAG_START CALLBACK ===")
+		print("Card ID:", message.id)
+		print("Group from message:", message.group)
+		
+		-- Try to get the actual collision group from the collision object
+		local actual_group = nil
+		local collision_fragments = {"collisionobject", "collision", "co"}
+		
+		for _, fragment in ipairs(collision_fragments) do
+			local url = msg.url(nil, message.id, fragment)
+			local success, group = pcall(function()
+				return go.get(url, "group")
+			end)
+			
+			if success and group then
+				actual_group = group
+				print("✓ Found collision group:", group, "via fragment:", fragment)
+				break
 			end
-			return false -- Return false to allow dragging
-		elseif message.group == hash("opponentCard") or message.group == hash("dropzone") then
-			-- Never allow dragging opponent cards
-			return true
+		end
+		
+		-- Use actual_group if found, otherwise fall back to message.group
+		local check_group = actual_group or message.group
+		print("Using group for checks:", check_group)
+		
+		-- FIRST: Block opponent cards immediately
+		if check_group == hash("opponentCard") then
+			print("BLOCKED: opponentCard group cannot be dragged\n")
+			return true -- Never allow dragging opponent cards
+		end
+		
+		-- SECOND: Block dropzones
+		if check_group == hash("dropzone") then
+			print("BLOCKED: dropzone cannot be dragged\n")
+			return true -- Never allow dragging dropzones
+		end
+		
+		-- THIRD: Check playerCard group
+		if check_group == hash("playerCard") then
+			print("✓ Group is playerCard, checking properties...")
+			
+			-- Get card properties RIGHT NOW (not from cached variable)
+			local url = msg.url(message.id)
+			url.fragment = "card"
+			
+			-- Check isDraggable property
+			local success, is_draggable = pcall(function()
+				return go.get(url, "isDraggable")
+			end)
+			
+			print("isDraggable check - success:", success, "value:", is_draggable)
+			
+			if success and is_draggable == false then
+				print("BLOCKED: isDraggable is false\n")
+				return true -- Prevent dragging
+			end
+			
+			-- Check owner_id as extra safety
+			local owner_success, owner_id = pcall(function()
+				return go.get(url, "owner_id")
+			end)
+			
+			print("owner_id check - success:", owner_success, "value:", owner_id)
+			print("LOCAL_PLAYER_ID:", LOCAL_PLAYER_ID)
+			
+			if owner_success and owner_id and owner_id ~= 0 then
+				if owner_id ~= LOCAL_PLAYER_ID then
+					print("BLOCKED: Card owner", owner_id, "!= local player", LOCAL_PLAYER_ID, "\n")
+					return true -- Prevent dragging
+				end
+			end
+			
+			print("✓ ALLOWED: All checks passed, allowing drag\n")
+			return false -- Allow dragging
 		end
 
-		return false
+		-- If group is "card" (default), check owner_id directly
+		if check_group == hash("card") then
+			print("⚠ Group is 'card' (default) - checking owner_id directly...")
+			
+			local url = msg.url(message.id)
+			url.fragment = "card"
+			
+			-- Check owner_id
+			local owner_success, owner_id = pcall(function()
+				return go.get(url, "owner_id")
+			end)
+			
+			print("owner_id check - success:", owner_success, "value:", owner_id)
+			print("LOCAL_PLAYER_ID:", LOCAL_PLAYER_ID)
+			
+			if owner_success and owner_id then
+				if owner_id == LOCAL_PLAYER_ID then
+					-- Check isDraggable
+					local drag_success, is_draggable = pcall(function()
+						return go.get(url, "isDraggable")
+					end)
+					
+					print("isDraggable check - success:", drag_success, "value:", is_draggable)
+					
+					if drag_success and is_draggable then
+						print("✓ ALLOWED: Owner matches and isDraggable is true\n")
+						return false -- Allow dragging
+					else
+						print("BLOCKED: isDraggable is false\n")
+						return true
+					end
+				else
+					print("BLOCKED: Not owned by local player\n")
+					return true
+				end
+			end
+		end
+
+		-- Default: block unknown groups
+		print("BLOCKED: Unknown group or checks failed\n")
+		return true
 	end)
 end
 
@@ -39,10 +146,27 @@ function on_input(self, action_id, action)
 	end
 end
 
+-- Helper function to get owner_id from a card
+local function get_owner_id(card_id)
+	local url = msg.url(card_id)
+	url.fragment = "card"
+
+	local success, result = pcall(function()
+		return go.get(url, "owner_id")
+	end)
+
+	if success and result then
+		return result
+	end
+
+	return nil
+end
+
 --listen for type of user input
 function on_message(self, message_id, message, sender)
 	if message_id == cursor.OVER then
 		if message.group == hash("playerCard") then
+			-- Show hover effect for player cards
 			local z_pos = go.get(game_manager, "zPosition")
 			local p = go.get_position(message.id)
 			go.set_position(vmath.vector3(p.x, p.y, z_pos), message.id)
@@ -103,42 +227,66 @@ function on_message(self, message_id, message, sender)
 		end
 	elseif message_id == cursor.PRESSED then
 		if message.group == hash("playerCard") or message.group == hash("opponentCard") then
-			-- 1. BRING TO FRONT IMMEDIATELY ON PRESS
+			print("=== PRESSED ===")
+			print("Card ID:", message.id)
+			print("Group:", message.group)
+
+			-- BRING TO FRONT IMMEDIATELY ON PRESS (highest z-position)
 			local z_pos = go.get(game_manager, "zPosition")
 			local current_pos = go.get_position(message.id)
 			go.set_position(vmath.vector3(current_pos.x, current_pos.y, z_pos), message.id)
 			go.set(game_manager, "zPosition", (z_pos + 0.01))
 
-			-- 2. Your existing draggable logic
-			local url = msg.url(message.id)
-			url.fragment = "card"
-			local success, is_draggable = pcall(function()
-				return go.get(url, "isDraggable")
-			end)
+			-- IMPORTANT: Only allow dragging for playerCard group
+			if message.group == hash("opponentCard") then
+				can_drag_card = false
+				print("BLOCKED: opponentCard cannot be dragged")
+			elseif message.group == hash("playerCard") then
+				-- Check if card is draggable
+				local url = msg.url(message.id)
+				url.fragment = "card"
+				local success, is_draggable = pcall(function()
+					return go.get(url, "isDraggable")
+				end)
 
-			if success then
-				can_drag_card = is_draggable
-			else
-				can_drag_card = (message.group == hash("playerCard"))
+				if success then
+					can_drag_card = is_draggable
+					print("isDraggable from card:", is_draggable)
+				else
+					-- Fallback: allow playerCards to be draggable
+					can_drag_card = true
+					print("Fallback: isDraggable set to true")
+				end
+
+				-- Verify ownership as extra safety check
+				local owner_id = get_owner_id(message.id)
+				if owner_id then
+					print("Owner ID:", owner_id)
+					if owner_id ~= LOCAL_PLAYER_ID then
+						can_drag_card = false
+						print("BLOCKED: Not owned by local player")
+					end
+				end
 			end
+
+			print("Final can_drag_card:", can_drag_card)
 		end
 	elseif message_id == cursor.RELEASED then
 		if message.group == hash("playerCard") or message.group == hash("opponentCard") then
+			print("=== RELEASED ===")
 			can_drag_card = false
 			self.dragging_card = nil
 		end
 	elseif message_id == cursor.CLICKED then
 		-- Handle click events if needed
 	elseif message_id == cursor.DRAG_START then
+		print("=== DRAG_START MESSAGE ===")
 		self.dragging_card = message.id
 
-		--set the z position to bring the dragged card to top
-		local z_pos = go.get(game_manager, "zPosition")
-		local current_pos = go.get_position(message.id)
-		go.set_position(vmath.vector3(current_pos.x, current_pos.y, z_pos), message.id)
-		-- increment the current zPosition in the game_manager
-		go.set(game_manager, "zPosition", (z_pos + 0.01))
+		-- Z-position was already set in PRESSED
 	elseif message_id == cursor.DRAG_END then
+		print("=== DRAG_END ===")
+
 		-- Check if the card position is within dropzone bounds
 		local in_dropzone = false
 		if dropzone_bounds.id then
@@ -152,6 +300,7 @@ function on_message(self, message_id, message, sender)
 		local is_opponent_card = (message.group == hash("opponentCard"))
 
 		if (is_player_card or is_opponent_card) and in_dropzone and dropzone_bounds.id then
+			print("Card dropped in dropzone")
 			-- Card is being dropped in the dropzone
 			local dropzone = dropzone_bounds.id
 
@@ -185,7 +334,6 @@ function on_message(self, message_id, message, sender)
 			-- Update game state
 			go.set(game_manager, "cardsPlayed", total_cards)
 			go.set(game_manager, "zPosition", z_pos + 0.01)
-
 		end
 
 		self.dragging_card = nil

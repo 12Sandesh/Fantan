@@ -5,3 +5,4 @@ go.property("cardsPlayed", 0)
 --store the number of card backs in the opponent's hand
 go.property("cardsInOpponentHand", 0)
 
+-- go.property("current_player_id", 1)

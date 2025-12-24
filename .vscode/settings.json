@@ -1,0 +1,19 @@
+{
+    "Lua.diagnostics.globals": [
+        "go",
+        "init",
+        "msg",
+        "gui",
+        "hash",
+        "timer",
+        "vmath",
+        "factory",
+        "socket",
+        "sprite",
+        "on_input",
+        "on_message",
+        "on_reload",
+        "final",
+        "update"
+    ]
+}

@@ -3,7 +3,7 @@ components {
   component: "/scripts/dropzone.script"
 }
 embedded_components {
-  id: "sprite"
+  id: "dropzone_sprite"
   type: "sprite"
   data: "default_animation: \"dropzone\"\n"
   "material: \"/builtins/materials/sprite.material\"\n"
