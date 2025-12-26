@@ -4,7 +4,7 @@ local game_manager = "/game_manager#game_manager"
 local dropzone_bounds = {}
 
 -- The local player's ID (the human player controlling this device)
-local LOCAL_PLAYER_ID = 1  -- Change this to match your local player's ID
+local LOCAL_PLAYER_ID = 1 -- Change this to match your local player's ID
 
 function init(self)
 	if not go.get("#cursor", "acquire_input_focus") then
@@ -22,103 +22,103 @@ function init(self)
 		print("\n=== DRAG_START CALLBACK ===")
 		print("Card ID:", message.id)
 		print("Group from message:", message.group)
-		
+
 		-- Try to get the actual collision group from the collision object
 		local actual_group = nil
-		local collision_fragments = {"collisionobject", "collision", "co"}
-		
+		local collision_fragments = { "collisionobject", "collision", "co" }
+
 		for _, fragment in ipairs(collision_fragments) do
 			local url = msg.url(nil, message.id, fragment)
 			local success, group = pcall(function()
 				return go.get(url, "group")
 			end)
-			
+
 			if success and group then
 				actual_group = group
 				print("✓ Found collision group:", group, "via fragment:", fragment)
 				break
 			end
 		end
-		
+
 		-- Use actual_group if found, otherwise fall back to message.group
 		local check_group = actual_group or message.group
 		print("Using group for checks:", check_group)
-		
+
 		-- FIRST: Block opponent cards immediately
 		if check_group == hash("opponentCard") then
 			print("BLOCKED: opponentCard group cannot be dragged\n")
 			return true -- Never allow dragging opponent cards
 		end
-		
+
 		-- SECOND: Block dropzones
 		if check_group == hash("dropzone") then
 			print("BLOCKED: dropzone cannot be dragged\n")
 			return true -- Never allow dragging dropzones
 		end
-		
+
 		-- THIRD: Check playerCard group
 		if check_group == hash("playerCard") then
 			print("✓ Group is playerCard, checking properties...")
-			
+
 			-- Get card properties RIGHT NOW (not from cached variable)
 			local url = msg.url(message.id)
 			url.fragment = "card"
-			
+
 			-- Check isDraggable property
 			local success, is_draggable = pcall(function()
 				return go.get(url, "isDraggable")
 			end)
-			
+
 			print("isDraggable check - success:", success, "value:", is_draggable)
-			
+
 			if success and is_draggable == false then
 				print("BLOCKED: isDraggable is false\n")
 				return true -- Prevent dragging
 			end
-			
-			-- Check owner_id as extra safety
-			local owner_success, owner_id = pcall(function()
-				return go.get(url, "owner_id")
+
+			-- Check current_player_id as extra safety
+			local owner_success, current_player_id = pcall(function()
+				return go.get(url, "current_player_id")
 			end)
-			
-			print("owner_id check - success:", owner_success, "value:", owner_id)
+
+			print("current_player_id check - success:", owner_success, "value:", current_player_id)
 			print("LOCAL_PLAYER_ID:", LOCAL_PLAYER_ID)
-			
-			if owner_success and owner_id and owner_id ~= 0 then
-				if owner_id ~= LOCAL_PLAYER_ID then
-					print("BLOCKED: Card owner", owner_id, "!= local player", LOCAL_PLAYER_ID, "\n")
+
+			if owner_success and current_player_id and current_player_id ~= 0 then
+				if current_player_id ~= LOCAL_PLAYER_ID then
+					print("BLOCKED: Card owner", current_player_id, "!= local player", LOCAL_PLAYER_ID, "\n")
 					return true -- Prevent dragging
 				end
 			end
-			
+
 			print("✓ ALLOWED: All checks passed, allowing drag\n")
 			return false -- Allow dragging
 		end
 
-		-- If group is "card" (default), check owner_id directly
+		-- If group is "card" (default), check current_player_id directly
 		if check_group == hash("card") then
-			print("⚠ Group is 'card' (default) - checking owner_id directly...")
-			
+			print("⚠ Group is 'card' (default) - checking current_player_id directly...")
+
 			local url = msg.url(message.id)
 			url.fragment = "card"
-			
-			-- Check owner_id
-			local owner_success, owner_id = pcall(function()
-				return go.get(url, "owner_id")
+
+			-- Check current_player_id
+			local owner_success, current_player_id = pcall(function()
+				return go.get(url, "current_player_id")
 			end)
-			
-			print("owner_id check - success:", owner_success, "value:", owner_id)
+
+			print("current_player_id check - success:", owner_success, "value:", current_player_id)
 			print("LOCAL_PLAYER_ID:", LOCAL_PLAYER_ID)
-			
-			if owner_success and owner_id then
-				if owner_id == LOCAL_PLAYER_ID then
+
+			if owner_success and current_player_id then
+				if current_player_id == LOCAL_PLAYER_ID then
 					-- Check isDraggable
 					local drag_success, is_draggable = pcall(function()
 						return go.get(url, "isDraggable")
 					end)
-					
+
 					print("isDraggable check - success:", drag_success, "value:", is_draggable)
-					
+
 					if drag_success and is_draggable then
 						print("✓ ALLOWED: Owner matches and isDraggable is true\n")
 						return false -- Allow dragging
@@ -146,13 +146,13 @@ function on_input(self, action_id, action)
 	end
 end
 
--- Helper function to get owner_id from a card
-local function get_owner_id(card_id)
+-- Helper function to get current_player_id from a card
+local function get_current_player_id(card_id)
 	local url = msg.url(card_id)
 	url.fragment = "card"
 
 	local success, result = pcall(function()
-		return go.get(url, "owner_id")
+		return go.get(url, "current_player_id")
 	end)
 
 	if success and result then
@@ -259,10 +259,10 @@ function on_message(self, message_id, message, sender)
 				end
 
 				-- Verify ownership as extra safety check
-				local owner_id = get_owner_id(message.id)
-				if owner_id then
-					print("Owner ID:", owner_id)
-					if owner_id ~= LOCAL_PLAYER_ID then
+				local current_player_id = get_current_player_id(message.id)
+				if current_player_id then
+					print("Owner ID:", current_player_id)
+					if current_player_id ~= LOCAL_PLAYER_ID then
 						can_drag_card = false
 						print("BLOCKED: Not owned by local player")
 					end

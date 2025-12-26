@@ -1,5 +1,5 @@
 go.property("isDraggable", true)
-go.property("owner_id", 0)
+go.property("current_player_id", 0)
 
 -- IMPORTANT: Set this to match your local player's ID
 local LOCAL_PLAYER_ID = 1
@@ -8,9 +8,9 @@ function init(self)
     -- Initialize card properties with default values from go.properties
     self.card_rank = ""
     self.is_draggable = true
-    self.owner_id = 0
+    self.current_player_id = 0
 
-    print("Card initialized - owner_id:", self.owner_id, "isDraggable:", self.is_draggable, "\n")
+    print("Card initialized - current_player_id:", self.current_player_id, "isDraggable:", self.is_draggable, "\n")
 end
 
 function on_message(self, message_id, message, sender)
@@ -30,20 +30,20 @@ function on_message(self, message_id, message, sender)
             print("isDraggable set to:", message.is_draggable)
         end
 
-        -- Update the owner_id property (CRITICAL for ownership checking)
+        -- Update the current_player_id property (CRITICAL for ownership checking)
         if message.owner ~= nil then
-            self.owner_id = message.owner
-            go.set("#", "owner_id", message.owner)
-            print("owner_id set to:", message.owner)
+            self.current_player_id = message.owner
+            go.set("#", "current_player_id", message.owner)
+            print("current_player_id set to:", message.owner)
 
             -- CRITICAL: Set the collision group based on owner
             print("LOCAL_PLAYER_ID:", LOCAL_PLAYER_ID)
             print("Card owner:", message.owner)
-            
+
             -- Try different collision object fragment names
-            local collision_fragments = {"#collisionobject", "#collision", "#co", "#"}
+            local collision_fragments = { "#collisionobject", "#collision", "#co", "#" }
             local group_set = false
-            
+
             for _, fragment in ipairs(collision_fragments) do
                 local success = pcall(function()
                     if message.owner == LOCAL_PLAYER_ID then
@@ -52,18 +52,18 @@ function on_message(self, message_id, message, sender)
                         msg.post(fragment, "set_group", { group = hash("opponentCard") })
                     end
                 end)
-                
+
                 if success then
                     group_set = true
                     print("✓ Collision group set via:", fragment)
                     break
                 end
             end
-            
+
             if not group_set then
                 print("⚠ WARNING: Could not set collision group!")
             end
-            
+
             if message.owner == LOCAL_PLAYER_ID then
                 print("✓ Collision group should be: playerCard")
             else
@@ -79,12 +79,12 @@ function on_message(self, message_id, message, sender)
         end
 
         -- Print final state for debugging
-        print("Card setup complete - Rank:", self.card_rank, "Owner:", self.owner_id, "Draggable:", self.is_draggable)
+        print("Card setup complete - Rank:", self.card_rank, "Owner:", self.current_player_id, "Draggable:",
+            self.is_draggable)
         print("===\n")
-    
     elseif message_id == hash("get_owner") then
         -- Optional: Allow querying the owner
-        print("get_owner request - returning:", self.owner_id)
-        msg.post(sender, "owner_response", { owner_id = self.owner_id })
+        print("get_owner request - returning:", self.current_player_id)
+        msg.post(sender, "owner_response", { current_player_id = self.current_player_id })
     end
 end
