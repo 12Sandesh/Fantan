@@ -1,14 +1,14 @@
 images {
-  image: "/assests/cards/1C.png"
+  image: "/assests/cards/AC.png"
 }
 images {
-  image: "/assests/cards/1D.png"
+  image: "/assests/cards/AD.png"
 }
 images {
-  image: "/assests/cards/1H.png"
+  image: "/assests/cards/AH.png"
 }
 images {
-  image: "/assests/cards/1S.png"
+  image: "/assests/cards/AS.png"
 }
 images {
   image: "/assests/cards/2C.png"

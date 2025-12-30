@@ -1,7 +1,7 @@
 name: "game"
 instances {
   id: "dropzone1"
-  prototype: "/game_object/dropzone.go"
+  prototype: "/go/dropzone.go"
   children: "textbox1"
   position {
     x: 270.0
@@ -10,7 +10,7 @@ instances {
 }
 instances {
   id: "dropzone2"
-  prototype: "/game_object/dropzone.go"
+  prototype: "/go/dropzone.go"
   children: "textbox2"
   position {
     x: 410.33
@@ -19,7 +19,7 @@ instances {
 }
 instances {
   id: "dropzone3"
-  prototype: "/game_object/dropzone.go"
+  prototype: "/go/dropzone.go"
   children: "textbox3"
   position {
     x: 550.67
@@ -28,7 +28,7 @@ instances {
 }
 instances {
   id: "dropzone4"
-  prototype: "/game_object/dropzone.go"
+  prototype: "/go/dropzone.go"
   children: "textbox4"
   position {
     x: 691.0
@@ -58,7 +58,7 @@ embedded_instances {
   "embedded_components {\n"
   "  id: \"card_factory\"\n"
   "  type: \"factory\"\n"
-  "  data: \"prototype: \\\"/game_object/card.go\\\"\\n"
+  "  data: \"prototype: \\\"/go/card.go\\\"\\n"
   "\"\n"
   "}\n"
   ""
