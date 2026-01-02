@@ -19,7 +19,7 @@ embedded_components {
   }
 }
 embedded_components {
-  id: "collisionobject"
+  id: "card_co"
   type: "collisionobject"
   data: "type: COLLISION_OBJECT_TYPE_TRIGGER\n"
   "mass: 0.0\n"

@@ -18,14 +18,14 @@ embedded_components {
   }
 }
 embedded_components {
-  id: "collisionobject"
+  id: "dropzone_co"
   type: "collisionobject"
   data: "type: COLLISION_OBJECT_TYPE_TRIGGER\n"
   "mass: 0.0\n"
   "friction: 0.1\n"
   "restitution: 0.5\n"
   "group: \"dropzone\"\n"
-  "mask: \"card\"\n"
+  "mask: \"playerCard\"\n"
   "mask: \"cursor\"\n"
   "embedded_collision_shape {\n"
   "  shapes {\n"

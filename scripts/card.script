@@ -1,90 +1,95 @@
+-- card.script - Card component logic
 go.property("isDraggable", true)
 go.property("current_player_id", 0)
+go.property("original_pos_x", 0)
+go.property("original_pos_y", 0)
+go.property("original_pos_z", 0)
 
--- IMPORTANT: Set this to match your local player's ID
-local LOCAL_PLAYER_ID = 1
+local config = require "modules.config"
 
 function init(self)
-    -- Initialize card properties with default values from go.properties
-    self.card_rank = ""
-    self.is_draggable = true
-    self.current_player_id = 0
-
-    print("Card initialized - current_player_id:", self.current_player_id, "isDraggable:", self.is_draggable, "\n")
+    -- Store rank as an instance variable instead of property
+    self.rank = ""
+    self.original_pos = nil
+    print("Card initialized")
 end
 
 function on_message(self, message_id, message, sender)
     if message_id == hash("set_card") then
         print("\n=== set_card message received ===")
 
-        -- Store rank
+        -- 1. SET RANK
         if message.rank then
-            self.card_rank = message.rank
-            print("Card rank set to:", message.rank)
+            self.rank = message.rank
+
+            -- Store in global tracking (backup)
+            _G.card_ranks = _G.card_ranks or {}
+            _G.card_ranks[tostring(go.get_id())] = message.rank
+
+            -- Send to cursor controller
+            -- msg.post("game:/cursor_controller#cursor_controller", "register_card_rank", {
+            -- card_id = go.get_id(),
+            -- rank = message.rank
+            -- })
         end
 
-        -- Update the isDraggable property
-        if message.is_draggable ~= nil then
-            self.is_draggable = message.is_draggable
-            go.set("#", "isDraggable", message.is_draggable)
-            print("isDraggable set to:", message.is_draggable)
+        -- 2. SET DRAGGABLE
+        local draggable = message.is_draggable
+        if draggable == nil then
+            -- Default: only draggable if owned by local player
+            draggable = (message.owner == config.LOCAL_PLAYER_ID)
         end
+        go.set("#", "isDraggable", draggable)
 
-        -- Update the current_player_id property (CRITICAL for ownership checking)
+
+        -- 3. SET OWNER
         if message.owner ~= nil then
-            self.current_player_id = message.owner
             go.set("#", "current_player_id", message.owner)
-            print("current_player_id set to:", message.owner)
 
-            -- CRITICAL: Set the collision group based on owner
-            print("LOCAL_PLAYER_ID:", LOCAL_PLAYER_ID)
-            print("Card owner:", message.owner)
-
-            -- Try different collision object fragment names
-            local collision_fragments = { "#collisionobject", "#collision", "#co", "#" }
-            local group_set = false
-
-            for _, fragment in ipairs(collision_fragments) do
-                local success = pcall(function()
-                    if message.owner == LOCAL_PLAYER_ID then
-                        msg.post(fragment, "set_group", { group = hash("playerCard") })
-                    else
-                        msg.post(fragment, "set_group", { group = hash("opponentCard") })
-                    end
-                end)
-
-                if success then
-                    group_set = true
-                    print("✓ Collision group set via:", fragment)
-                    break
-                end
-            end
-
-            if not group_set then
-                print("⚠ WARNING: Could not set collision group!")
-            end
-
-            if message.owner == LOCAL_PLAYER_ID then
-                print("✓ Collision group should be: playerCard")
+            -- Set collision group
+            local target_group
+            if message.owner == 0 then
+                target_group = "tableCard"
+            elseif message.owner == config.LOCAL_PLAYER_ID then
+                target_group = "playerCard"
             else
-                print("✓ Collision group should be: opponentCard")
+                target_group = "opponentCard"
             end
+
+            -- CHANGE THIS LINE:
+            -- Use "card_co" instead of "collisionobject"
+            msg.post("#card_co", "set_group", { group = hash(target_group) })
         end
 
-        -- Set the card visual
+        -- 4. SET ORIGINAL POSITION
+        local current_pos = go.get_position()
+        self.original_pos = current_pos
+        go.set("#", "original_pos_x", current_pos.x)
+        go.set("#", "original_pos_y", current_pos.y)
+        go.set("#", "original_pos_z", current_pos.z)
+
+        -- 5. SET VISUAL
         if message.face_up then
-            sprite.play_flipbook("#sprite", hash(message.rank))
+            sprite.play_flipbook("#sprite", hash(self.rank))
         else
             sprite.play_flipbook("#sprite", hash("back"))
         end
 
-        -- Print final state for debugging
-        print("Card setup complete - Rank:", self.card_rank, "Owner:", self.current_player_id, "Draggable:",
-            self.is_draggable)
-        print("===\n")
+        print("Card setup complete. Owner:", go.get("#", "current_player_id"),
+            "Draggable:", go.get("#", "isDraggable"),
+            "Rank:", self.rank)
+    elseif message_id == hash("get_rank") then
+        -- Allow querying the rank
+        msg.post(sender, "rank_response", { rank = self.rank })
     elseif message_id == hash("get_owner") then
-        -- Optional: Allow querying the owner
-        print("get_owner request - returning:", self.current_player_id)
-        msg.post(sender, "owner_response", { current_player_id = self.current_player_id })
+        -- Allow querying the owner
+        local owner = go.get("#", "current_player_id")
+        msg.post(sender, "owner_response", { current_player_id = owner })
+    elseif message_id == hash("get_original_pos") then
+        -- Allow querying the original position
+        local x = go.get("#", "original_pos_x")
+        local y = go.get("#", "original_pos_y")
+        local z = go.get("#", "original_pos_z")
+        msg.post(sender, "original_pos_response", { pos = vmath.vector3(x, y, z) })
     end
 end

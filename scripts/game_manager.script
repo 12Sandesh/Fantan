@@ -1,7 +1,423 @@
---store zPosition to be incremented so the active card is always on top
 go.property("zPosition", 0.2)
---store the number of cards played in the dropzone
 go.property("cardsPlayed", 0)
---store the number of card backs in the opponent's hand
-go.property("cardsInOpponentHand", 0)
+go.property("game_started", false)
 
+local config = require "modules.config"
+
+function init(self)
+    print("Game Manager initialized")
+
+    -- Use config values
+    self.local_player_id = config.LOCAL_PLAYER_ID
+
+    -- Initialize game logic modules
+    self.logic = require "modules.main"
+    self.dropzones = require "modules.dropzones"
+
+    -- Initialize player states
+    self.player_states = {}
+    for i = 1, config.PLAYER_COUNT do
+        table.insert(self.player_states, {
+            id = i,
+            name = i == config.LOCAL_PLAYER_ID and "You" or "Player " .. i,
+            is_human = i == config.LOCAL_PLAYER_ID,
+            cards_in_hand = config.CARDS_PER_PLAYER,
+            passed_this_round = false,
+            score = 0
+        })
+    end
+
+    -- Card tracking
+    self.cards_on_table = {}
+    self.current_turn = 1
+    self.game_over = false
+
+    print("Local player is Player", self.local_player_id)
+end
+
+-- Increment and get zPosition for new cards
+function increment_z_position(self)
+    self.zPosition = self.zPosition + 0.01
+
+    -- Reset if getting too high (prevent floating point issues)
+    if self.zPosition > 100 then
+        self.zPosition = 0.2
+    end
+
+    return self.zPosition
+end
+
+-- Get current zPosition
+function get_z_position(self)
+    return self.zPosition
+end
+
+-- Register a card that's been played
+function register_card_played(self, card_id, suit, rank, player_id)
+    local z_pos = increment_z_position(self)
+
+    -- Store card data
+    local card_data = {
+        id = card_id,
+        suit = suit,
+        rank = rank,
+        player_id = player_id,
+        z_index = z_pos,
+        timestamp = socket and socket.gettime or os.clock()
+    }
+
+    table.insert(self.cards_on_table, card_data)
+    self.cardsPlayed = self.cardsPlayed + 1
+
+    -- Update player's hand count
+    local player_state = self.player_states[player_id]
+    if player_state then
+        player_state.cards_in_hand = math.max(0, player_state.cards_in_hand - 1)
+        print("Player", player_id, "has", player_state.cards_in_hand, "cards left")
+
+        -- Check if player won (no cards left)
+        if player_state.cards_in_hand == 0 then
+            end_game(self, player_id)
+            return
+        end
+    end
+
+    -- Reset pass state for all players when a card is played
+    for _, player in ipairs(self.player_states) do
+        player.passed_this_round = false
+    end
+
+    print("Card registered:", rank .. suit, "by player", player_id, "z-index:", z_pos)
+end
+
+-- Handle deal completion
+local function on_deal_complete(self, player_hands)
+    self.game_started = true
+    self.current_turn = 1
+    self.game_over = false
+
+    -- Reset passed states
+    for _, player in ipairs(self.player_states) do
+        player.passed_this_round = false
+    end
+
+    print("=== GAME STARTED ===")
+    print("First turn: Player", self.current_turn)
+
+    -- Notify UI
+    msg.post("/turn_ui#turn", "game_started", {
+        current_turn = self.current_turn,
+        is_your_turn = (self.current_turn == self.local_player_id)
+    })
+
+    -- Start the first turn
+    start_turn(self, self.current_turn)
+end
+
+-- Start a player's turn
+function start_turn(self, player_id)
+    if self.game_over then return end
+
+    print("\n=== START_TURN ===")
+    print("Current turn:", self.current_turn)
+    print("Starting turn for player:", player_id)
+
+    local player_state = self.player_states[player_id]
+    if not player_state then
+        print("ERROR: No player state for player", player_id)
+        return
+    end
+
+    print("Player", player_id, "'s turn started")
+
+    -- Check if player has any playable cards
+    local has_playable = self.logic.player_has_playable_cards(player_id)
+
+    if not has_playable then
+        print("Player", player_id, "has no playable cards - must pass")
+
+        if player_id == self.local_player_id then
+            -- Let the player manually pass
+            msg.post("/turn_ui#turn", "must_pass")
+        else
+            -- AI passes automatically
+            player_state.passed_this_round = true
+            if all_players_passed(self) then
+                end_game(self, nil)
+                return
+            end
+            advance_turn(self)
+        end
+        return
+    end
+
+    -- Reset pass status if they have playable cards
+    player_state.passed_this_round = false
+
+    -- If it's the local human player's turn
+    if player_id == self.local_player_id then
+        msg.post("/turn_ui#turn", "your_turn")
+        msg.post("/cursor_controller#cursor_controller", "enable_dragging")
+
+        -- If it's an AI player's turn
+    else
+        msg.post("/turn_ui#turn", "ai_turn", { player_id = player_id })
+        trigger_ai_turn(self, player_id)
+    end
+end
+
+-- Advance to next player's turn
+function advance_turn(self)
+    if self.game_over then return end
+
+    -- Add a 2-second delay before advancing the turn
+    timer.delay(2, false, function()
+        if self.game_over then return end
+
+        local next_player = self.current_turn
+        local attempts = 0
+
+        -- Find next non-passed player
+        repeat
+            next_player = (next_player % config.PLAYER_COUNT) + 1
+            attempts = attempts + 1
+
+            if attempts > config.PLAYER_COUNT then
+                -- All players have passed
+                end_game(self, nil)
+                return
+            end
+        until not self.player_states[next_player].passed_this_round
+
+        self.current_turn = next_player
+        self.logic.game_state.current_turn = self.current_turn
+
+        print("Turn advanced to Player", self.current_turn)
+        start_turn(self, self.current_turn)
+    end)
+end
+
+-- Trigger AI player's move
+function trigger_ai_turn(self, player_id)
+    print("AI Player", player_id, "thinking...")
+
+    -- Simulate thinking delay (0.5-2 seconds)
+    local delay = 0.5 + math.random() * 1.5
+
+    timer.delay(delay, false, function()
+        if self.game_over or self.current_turn ~= player_id then
+            return -- Game ended or turn changed
+        end
+
+        local playable_cards = {}
+        local hand = self.logic.get_player_hand(player_id)
+
+        -- Find all playable cards
+        for _, card_str in ipairs(hand) do
+            if self.logic.can_play(card_str) then
+                table.insert(playable_cards, card_str)
+            end
+        end
+
+        if #playable_cards > 0 then
+            -- AI chooses a random playable card
+            local card_to_play = playable_cards[math.random(1, #playable_cards)]
+            process_ai_move(self, player_id, card_to_play)
+        else
+            -- AI must pass
+            print("AI Player", player_id, "passes (no playable cards)")
+            self.player_states[player_id].passed_this_round = true
+
+            if all_players_passed(self) then
+                end_game(self, nil)
+            else
+                advance_turn(self)
+            end
+        end
+    end)
+end
+
+-- Process AI move (create and animate card)
+function process_ai_move(self, player_id, card_str)
+    local rank, suit = self.logic.parse_card(card_str)
+    local snap_pos = self.dropzones.get_snap_position(rank, suit)
+    snap_pos.z = increment_z_position(self)
+
+    print("AI Player", player_id, "plays:", card_str)
+
+    -- Create the card
+    local card = factory.create("game:/dealer_go#card_factory", vmath.vector3(480, 320, snap_pos.z))
+
+    msg.post(card, "set_card", {
+        face_up = true,
+        rank = card_str,
+        is_draggable = false,
+        owner = player_id
+    })
+
+    -- Animate to position
+    go.animate(card, "position", go.PLAYBACK_ONCE_FORWARD,
+        snap_pos, go.EASING_OUTQUAD, 0.3)
+
+    -- Register the move with game logic (this advances turn internally)
+    local success, snap_pos_returned = self.logic.request_move(player_id, card_str)
+
+    if not success then
+        print("ERROR: AI move was rejected by game logic!")
+        return
+    end
+
+    -- Update game manager state
+    register_card_played(self, card, suit, rank, player_id)
+
+    -- The turn is no longer advanced in logic.request_move
+    -- We must advance it here, using the unified advance_turn function
+    advance_turn(self)
+end
+
+-- Check if all players have passed
+function all_players_passed(self)
+    for _, player in ipairs(self.player_states) do
+        if not player.passed_this_round then
+            return false
+        end
+    end
+    return true
+end
+
+
+-- End the game
+function end_game(self, winner_id)
+    if self.game_over then return end
+
+    self.game_over = true
+    print("=== GAME OVER ===")
+
+    -- Calculate scores
+    local scores = {}
+    for _, player in ipairs(self.player_states) do
+        local remaining_cards = player.cards_in_hand
+        local score = -remaining_cards * 10
+
+        if remaining_cards == 0 then
+            score = score + 50
+        end
+
+        player.score = score
+        scores[player.id] = {
+            name = player.name,
+            cards_left = remaining_cards,
+            score = score
+        }
+    end
+
+    -- Determine winner if not specified
+    if not winner_id then
+        local highest_score = -math.huge
+        for _, player in ipairs(self.player_states) do
+            if player.score > highest_score then
+                highest_score = player.score
+                winner_id = player.id
+            end
+        end
+    end
+
+    -- Notify UI
+    msg.post("/turn_ui#turn", "game_over", {
+        winner_id = winner_id,
+        scores = scores
+    })
+
+    print("Winner: Player", winner_id)
+
+    -- Disable dragging
+    msg.post("/cursor_controller#cursor_controller", "disable_dragging")
+end
+
+-- Reset the game
+function reset_game(self)
+    print("Resetting game...")
+
+    -- Reset properties
+    self.zPosition = 0.2
+    self.cardsPlayed = 0
+    self.cardsInOpponentHand = 0
+    self.game_started = false
+    self.game_over = false
+    self.current_turn = 1
+
+    -- Reset player states
+    for _, player in ipairs(self.player_states) do
+        player.cards_in_hand = config.CARDS_PER_PLAYER
+        player.passed = false
+        player.score = 0
+    end
+
+    -- Clear card tracking
+    self.cards_on_table = {}
+
+    -- Reset game logic
+    self.logic.start_game({ {}, {}, {} })
+
+    print("Game reset complete")
+
+    -- Notify UI
+    msg.post("/turn_ui#turn", "game_reset")
+end
+
+-- Handle incoming messages
+function on_message(self, message_id, message, sender)
+    if message_id == hash("deal_complete") then
+        print("DEBUG: Received deal_complete with player_hands:", message.player_hands)
+        on_deal_complete(self, message.player_hands)
+    elseif message_id == hash("card_played") then
+        -- Human player played a card
+        register_card_played(self,
+            message.card_id,
+            message.suit,
+            message.rank,
+            message.player_id
+        )
+    elseif message_id == hash("player_passed") then
+        -- Human player chooses to pass
+        local player_state = self.player_states[config.LOCAL_PLAYER_ID]
+        if player_state then
+            player_state.passed_this_round = true
+            print("Player passed their turn")
+
+            if all_players_passed(self) then
+                end_game(self, nil)
+            else
+                advance_turn(self)
+            end
+        end
+    elseif message_id == hash("advance_turn_request") then
+        -- Sync current turn from logic
+        self.current_turn = self.logic.get_current_turn()
+        -- Advance to next player
+        advance_turn(self)
+    elseif message_id == hash("get_z_position") then
+        -- Return current zPosition
+        msg.post(sender, "z_position_response", {
+            z_position = get_z_position(self)
+        })
+    elseif message_id == hash("get_turn_info") then
+        -- Return whose turn it is
+        msg.post(sender, "turn_info_response", {
+            current_turn = self.current_turn,
+            is_your_turn = (self.current_turn == self.local_player_id)
+        })
+    elseif message_id == hash("reset_game") then
+        reset_game(self)
+    elseif message_id == hash("force_ai_turn") then
+        -- Debug: Force AI to play
+        if not self.game_over and self.current_turn ~= self.local_player_id then
+            trigger_ai_turn(self, self.current_turn)
+        end
+    end
+end
+
+-- Clean up on deletion
+function final(self)
+    print("Game Manager shutting down")
+end

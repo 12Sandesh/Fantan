@@ -1,12 +1,5 @@
-local DECK = {
-    "1C", "1D", "1H", "1S", "2C", "2D", "2H", "2S",
-    "3C", "3D", "3H", "3S", "4C", "4D", "4H", "4S",
-    "5C", "5D", "5H", "5S", "6C", "6D", "6H", "6S",
-    "7C", "7D", "7H", "7S", "8C", "8D", "8H", "8S",
-    "9C", "9D", "9H", "9S", "TC", "TD", "TH", "TS",
-    "JC", "JD", "JH", "JS", "QC", "QD", "QH", "QS",
-    "KC", "KD", "KH", "KS"
-}
+local logic = require "modules.main"
+local config = require "modules.config"
 
 local function shuffle_deck(deck)
     for i = #deck, 2, -1 do
@@ -19,7 +12,7 @@ end
 
 local function deal_cards(self)
     local shuffled_deck = {}
-    for i, card in ipairs(DECK) do
+    for i, card in ipairs(config.DECK) do 
         shuffled_deck[i] = card
     end
     shuffle_deck(shuffled_deck)
@@ -28,88 +21,75 @@ local function deal_cards(self)
     local center = vmath.vector3(480, 320, 0.6)
 
     local targets = {
-
-        -- Player (Bottom): face_up = true
-        { pos = vmath.vector3(480, 60, 0.5),  dir = "horizontal", face_up = true,  is_opponent = false, base_rot = 0,   side = 1 },
-        -- Left Opponent: face_up = false
-        { pos = vmath.vector3(120, 550, 0.5), dir = "vertical",   face_up = false, is_opponent = true,  base_rot = -90, side = -1 },
-        -- Right Opponent: face_up = false
-        { pos = vmath.vector3(830, 550, 0.5), dir = "vertical",   face_up = false, is_opponent = true,  base_rot = 90,  side = 1 }
-
+        { pos = vmath.vector3(480, 60, 0.5),  face_up = true,  is_opponent = false, base_rot = 0,   side = 1 },
+        { pos = vmath.vector3(120, 550, 0.5), face_up = false, is_opponent = true,  base_rot = -90, side = -1 },
+        { pos = vmath.vector3(830, 550, 0.5), face_up = false, is_opponent = true,  base_rot = 90,  side = 1 }
     }
 
-    local cards_per_player = 17
+    local cards_per_player = config.CARDS_PER_PLAYER
     local card_count = 0
     local spread_player = 25
-
+    local player_data_hands = { {}, {}, {} }
 
     for round = 1, cards_per_player do
-        for i, config in ipairs(targets) do
-            -- Ensure we don't exceed the 52 cards in the table
+        for i, target_config in ipairs(targets) do
             if card_index <= #shuffled_deck then
+                -- 1. Get the card data
+                local current_rank = shuffled_deck[card_index]
+
+                -- 2. Save to logic data
+                table.insert(player_data_hands[i], current_rank)
+
+                -- 3. Prepare visual math
                 card_count = card_count + 1
                 local delay = card_count * 0.06
                 local step = (round - (cards_per_player / 2 + 0.5))
-                local final_pos = vmath.vector3(config.pos)
-                local final_tilt = config.base_rot
+                local final_pos = vmath.vector3(target_config.pos)  -- Use target_config
+                local final_tilt = target_config.base_rot  -- Use target_config
 
-                -- Pull the current card ID from the shuffled deck
-                local current_rank = shuffled_deck[card_index]
-                card_index = card_index + 1
-                if not config.is_opponent then
-                    -- PLAYER: Straight flat line
+                if not target_config.is_opponent then  -- Use target_config
                     final_pos.x = final_pos.x + (step * spread_player)
                 else
-                    -- OPPONENT FAN (true arc-based fan)
-
-                    local fan_radius = 110         -- size of the fan
-                    local fan_angle = math.rad(60) -- total fan spread
+                    -- Fan math
+                    local fan_radius = 110
+                    local fan_angle = math.rad(60)
                     local t = step / (cards_per_player / 2)
-
-                    -- angle for this card
                     local theta = t * fan_angle
+                    local base_angle = (target_config.side == 1) and math.rad(245) or math.rad(295)  -- Use target_config
+                    local angle = base_angle + theta * target_config.side  -- Use target_config
 
-                    -- base direction
-                    local base_angle
-                    if config.side == 1 then
-                        -- Right opponent (keep exactly as it is)
-                        base_angle = math.rad(245)
-                    else
-                        -- Left opponent (mirrored)
-                        base_angle = math.rad(295)
-                    end
-
-                    -- final angle
-                    local angle = base_angle + theta * config.side
-
-                    -- position on arc
                     final_pos.x = final_pos.x + math.cos(angle) * fan_radius
                     final_pos.y = final_pos.y + math.sin(angle) * fan_radius
-
-                    -- rotate card to follow arc
                     final_tilt = math.deg(angle) + 90
-
-                    -- Z layering
-                    final_pos.z = config.pos.z + (round * 0.001)
+                    final_pos.z = target_config.pos.z + (round * 0.001)  -- Use target_config
                 end
 
-                -- Create card from factory
+                -- 4. Create the card
                 local card = factory.create("#card_factory", center)
-                -- Set card properties immediately with correct face orientation
                 msg.post(card, "set_card", {
-                    face_up = config.face_up,              -- Player cards: true, Opponent cards: false
+                    face_up = target_config.face_up,  -- Use target_config
                     rank = current_rank,
-                    is_draggable = not config.is_opponent, -- Only player cards are draggable
+                    is_draggable = not target_config.is_opponent,  -- Use target_config
                     owner = i
                 })
 
-                -- Animate to position
+                -- 5. Animate
                 go.animate(card, "position", go.PLAYBACK_ONCE_FORWARD, final_pos, go.EASING_OUTQUAD, 0.5, delay)
-                -- Animate rotation
                 go.animate(card, "euler.z", go.PLAYBACK_ONCE_FORWARD, final_tilt, go.EASING_OUTQUAD, 0.5, delay)
+
+                -- 6. Move to next card in deck
+                card_index = card_index + 1
             end
         end
     end
+
+    -- Sync the data to your logic module
+    logic.start_game(player_data_hands)
+    
+    -- Send notification when done
+    msg.post("game:/game_manager#game_manager", "deal_complete", {
+        player_hands = player_data_hands
+    })
 end
 
 function init(self)

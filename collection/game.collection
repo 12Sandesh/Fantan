@@ -7,6 +7,14 @@ instances {
     x: 270.0
     y: 275.0
   }
+  component_properties {
+    id: "dropzone"
+    properties {
+      id: "suit_code"
+      value: "H"
+      type: PROPERTY_TYPE_HASH
+    }
+  }
 }
 instances {
   id: "dropzone2"
@@ -15,6 +23,14 @@ instances {
   position {
     x: 410.33
     y: 275.0
+  }
+  component_properties {
+    id: "dropzone"
+    properties {
+      id: "suit_code"
+      value: "D"
+      type: PROPERTY_TYPE_HASH
+    }
   }
 }
 instances {
@@ -25,6 +41,14 @@ instances {
     x: 550.67
     y: 275.0
   }
+  component_properties {
+    id: "dropzone"
+    properties {
+      id: "suit_code"
+      value: "S"
+      type: PROPERTY_TYPE_HASH
+    }
+  }
 }
 instances {
   id: "dropzone4"
@@ -33,6 +57,14 @@ instances {
   position {
     x: 691.0
     y: 275.0
+  }
+  component_properties {
+    id: "dropzone"
+    properties {
+      id: "suit_code"
+      value: "C"
+      type: PROPERTY_TYPE_HASH
+    }
   }
 }
 collection_instances {
@@ -150,7 +182,7 @@ embedded_instances {
   ""
 }
 embedded_instances {
-  id: "cursor"
+  id: "cursor_controller"
   data: "components {\n"
   "  id: \"cursor_controller\"\n"
   "  component: \"/scripts/cursor_controller.script\"\n"
@@ -185,6 +217,14 @@ embedded_instances {
   "  data: 10.0\\n"
   "}\\n"
   "\"\n"
+  "}\n"
+  ""
+}
+embedded_instances {
+  id: "turn_ui"
+  data: "components {\n"
+  "  id: \"turn\"\n"
+  "  component: \"/gui/turn.gui\"\n"
   "}\n"
   ""
 }
