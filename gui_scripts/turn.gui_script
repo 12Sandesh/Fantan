@@ -81,5 +81,7 @@ function on_message(self, message_id, message, sender)
     elseif message_id == hash("must_pass") then
         show_message("NO PLAYABLE CARDS")
         self.pass_button:set_enabled(true)
+    elseif message_id == hash("game_over") then
+        self.pass_button:set_enabled(false)
     end
 end

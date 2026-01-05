@@ -21,7 +21,7 @@ function init(self)
             id = i,
             name = i == config.LOCAL_PLAYER_ID and "You" or "Player " .. i,
             is_human = i == config.LOCAL_PLAYER_ID,
-            cards_in_hand = config.CARDS_PER_PLAYER,
+            cards_in_hand = 0,
             passed_this_round = false,
             score = 0
         })
@@ -40,7 +40,7 @@ function increment_z_position(self)
     self.zPosition = self.zPosition + 0.01
 
     -- Reset if getting too high (prevent floating point issues)
-    if self.zPosition > 100 then
+    if self.zPosition > 1 then
         self.zPosition = 0.2
     end
 
@@ -76,6 +76,7 @@ function register_card_played(self, card_id, suit, rank, player_id)
         print("Player", player_id, "has", player_state.cards_in_hand, "cards left")
 
         -- Check if player won (no cards left)
+        print("Checking win condition for player", player_id, "with", player_state.cards_in_hand, "cards in hand")
         if player_state.cards_in_hand == 0 then
             end_game(self, player_id)
             return
@@ -93,13 +94,20 @@ end
 -- Handle deal completion
 local function on_deal_complete(self, player_hands)
     self.game_started = true
-    self.current_turn = 1
+    self.current_turn = math.random(1, config.PLAYER_COUNT)
     self.game_over = false
 
     -- Reset passed states
-    for _, player in ipairs(self.player_states) do
+    for i, player in ipairs(self.player_states) do
         player.passed_this_round = false
+
+        -- ✅ sync real card counts
+        local hand = player_hands[i] or {}
+        player.cards_in_hand = #hand
+
+        print("Player", i, "starting cards:", player.cards_in_hand)
     end
+
 
     print("=== GAME STARTED ===")
     print("First turn: Player", self.current_turn)
@@ -285,9 +293,9 @@ function all_players_passed(self)
     return true
 end
 
-
 -- End the game
 function end_game(self, winner_id)
+    print("end_game called with winner_id:", winner_id)
     if self.game_over then return end
 
     self.game_over = true
@@ -307,7 +315,8 @@ function end_game(self, winner_id)
         scores[player.id] = {
             name = player.name,
             cards_left = remaining_cards,
-            score = score
+            score = score,
+            hand = self.logic.get_player_hand(player.id)
         }
     end
 
@@ -325,6 +334,11 @@ function end_game(self, winner_id)
     -- Notify UI
     msg.post("/turn_ui#turn", "game_over", {
         winner_id = winner_id,
+        scores = scores,
+        game_over = true
+    })
+    msg.post("/endscreen_ui#endscreen", "game_over", {
+        winner_id = winner_id,
         scores = scores
     })
 
@@ -341,16 +355,20 @@ function reset_game(self)
     -- Reset properties
     self.zPosition = 0.2
     self.cardsPlayed = 0
-    self.cardsInOpponentHand = 0
     self.game_started = false
     self.game_over = false
     self.current_turn = 1
 
     -- Reset player states
     for _, player in ipairs(self.player_states) do
-        player.cards_in_hand = config.CARDS_PER_PLAYER
+        player.cards_in_hand = 0
         player.passed = false
         player.score = 0
+    end
+
+    -- Delete old cards
+    for _, card_data in ipairs(self.cards_on_table) do
+        go.delete(card_data.id)
     end
 
     -- Clear card tracking
@@ -363,6 +381,10 @@ function reset_game(self)
 
     -- Notify UI
     msg.post("/turn_ui#turn", "game_reset")
+    msg.post("/endscreen_ui#endscreen", "game_reset")
+    
+    -- Deal new cards
+    msg.post("dealer_go#dealer", "start_dealing")
 end
 
 -- Handle incoming messages

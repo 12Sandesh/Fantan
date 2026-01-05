@@ -3,7 +3,6 @@ local M = {}
 
 M.LOCAL_PLAYER_ID = 1
 M.PLAYER_COUNT = 3
-M.CARDS_PER_PLAYER = 17
 M.MAX_Z_POSITION = 100.0  -- Prevent floating point precision issues
 
 M.DECK = {

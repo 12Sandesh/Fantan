@@ -65,8 +65,8 @@ nodes {
     y: -377.14285
   }
   size {
-    x: 200.0
-    y: 100.0
+    x: 125.0
+    y: 55.0
   }
   type: TYPE_BOX
   id: "pass_button"
