@@ -92,10 +92,8 @@ function on_message(self, message_id, message, sender)
 	if message_id == cursor.OVER then
 		if message.group == hash("playerCard") then
 			-- Show hover effect for player cards
-			local z_pos = go.get(game_manager, "zPosition")
 			local p = go.get_position(message.id)
-			go.set_position(vmath.vector3(p.x, p.y, z_pos), message.id)
-			go.set(game_manager, "zPosition", z_pos + 0.01)
+			go.set_position(vmath.vector3(p.x, p.y, 0.9), message.id)
 		end
 
 		if message.group == hash("dropzone") then
@@ -152,10 +150,8 @@ function on_message(self, message_id, message, sender)
 			print("Group:", message.group)
 
 			-- Bring to front immediately
-			local z_pos = go.get(game_manager, "zPosition")
 			local current_pos = go.get_position(message.id)
-			go.set_position(vmath.vector3(current_pos.x, current_pos.y, z_pos), message.id)
-			go.set(game_manager, "zPosition", z_pos + 0.01)
+			go.set_position(vmath.vector3(current_pos.x, current_pos.y, 0.9), message.id)
 
 			-- Check if draggable
 			if message.group == hash("opponentCard") then
@@ -219,12 +215,8 @@ function on_message(self, message_id, message, sender)
 			local success, snap_pos = logic.request_move(LOCAL_PLAYER_ID, card_rank_str)
 
 			if success and snap_pos then
-				-- Snap to position with proper z-index
-				local game_manager = "game:/game_manager#game_manager"
-				local z_pos = go.get(game_manager, "zPosition")
-				snap_pos.z = z_pos
-
-				-- Animate to position
+				-- Snap to position. The z-index will be corrected by the game_manager
+				-- after the "card_played" message is processed.
 				go.animate(message.id, "position", go.PLAYBACK_ONCE_FORWARD,
 					snap_pos, go.EASING_OUTQUAD, 0.2)
 
@@ -232,9 +224,6 @@ function on_message(self, message_id, message, sender)
 				local card_url = msg.url(message.id)
 				card_url.fragment = "card"
 				go.set(card_url, "isDraggable", false)
-
-				-- Update z-position in game manager
-				go.set(game_manager, "zPosition", z_pos + 0.01)
 
 				-- Notify game manager about played card
 				msg.post(game_manager, "card_played", {
