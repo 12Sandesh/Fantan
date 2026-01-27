@@ -13,6 +13,12 @@ function init(self)
     self.original_pos = nil
     print("Card initialized")
 end
+ 
+
+function on_input(self, action_id, action)
+    
+    
+end
 
 function on_message(self, message_id, message, sender)
     if message_id == hash("set_card") then
@@ -25,12 +31,6 @@ function on_message(self, message_id, message, sender)
             -- Store in global tracking (backup)
             _G.card_ranks = _G.card_ranks or {}
             _G.card_ranks[tostring(go.get_id())] = message.rank
-
-            -- Send to cursor controller
-            -- msg.post("game:/cursor_controller#cursor_controller", "register_card_rank", {
-            -- card_id = go.get_id(),
-            -- rank = message.rank
-            -- })
         end
 
         -- 2. SET DRAGGABLE
@@ -56,8 +56,6 @@ function on_message(self, message_id, message, sender)
                 target_group = "opponentCard"
             end
 
-            -- CHANGE THIS LINE:
-            -- Use "card_co" instead of "collisionobject"
             msg.post("#card_co", "set_group", { group = hash(target_group) })
         end
 

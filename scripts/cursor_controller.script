@@ -217,36 +217,38 @@ function on_message(self, message_id, message, sender)
 			if success and snap_pos then
 				-- Snap to position. The z-index will be corrected by the game_manager
 				-- after the "card_played" message is processed.
+
 				go.animate(message.id, "position", go.PLAYBACK_ONCE_FORWARD,
-					snap_pos, go.EASING_OUTQUAD, 0.2)
+					snap_pos, go.EASING_OUTQUAD, 0.2, 0, function()
+						print("animate position: " .. go.get_position(message.id))
 
-				-- Disable dragging on the card itself
-				local card_url = msg.url(message.id)
-				card_url.fragment = "card"
-				go.set(card_url, "isDraggable", false)
+						-- Disable dragging on the card itself
+						local card_url = msg.url(message.id)
+						card_url.fragment = "card"
+						go.set(card_url, "isDraggable", false)
 
-				-- Notify game manager about played card
-				msg.post(game_manager, "card_played", {
-					card_id = message.id,
-					suit = suit,
-					rank = rank,
-					player_id = LOCAL_PLAYER_ID
-				})
-				
-				-- Disable dragging immediately and advance turn
-				msg.post(".", "disable_dragging")
-				msg.post(game_manager, "advance_turn_request")
+						-- Disable dragging immediately and advance turn
+						msg.post(".", "disable_dragging")
+						msg.post(game_manager, "advance_turn_request")
+
+						msg.post(game_manager, "card_played", {
+							card_id = message.id,
+							suit = suit,
+							rank = rank,
+							player_id = LOCAL_PLAYER_ID
+						})
+					end)
 			else
 				-- Move rejected - return to hand
 				print("✗ Move rejected by game logic")
 				return_card_to_hand(self, message.id)
 			end
+			print("-------------" .. snap_pos)
 		else
 			-- Wrong drop zone
 			print("✗ Wrong drop zone. Card:", suit, "Zone:", suit_under_card)
 			return_card_to_hand(self, message.id)
 		end
-
 		self.dragging_card = nil
 	end
 end

@@ -62,26 +62,29 @@ function on_message(self, message_id, message, sender)
         end
         show_message(text)
         self.pass_button:set_enabled(false)
-    elseif message_id == hash("game_started") then
-        self.pass_button:set_enabled(false)
-        if message.is_your_turn then
-            show_message("YOUR TURN")
+
+        -- NEW: Handle when bots have no moves and pass
+    elseif message_id == hash("bot_passed") then
+        local player_id = message.player_id
+        local text = ""
+        if player_id == 2 then
+            text = "LEFT BOT PASSED"
+        elseif player_id == 3 then
+            text = "RIGHT BOT PASSED"
         else
-            local player_id = message.current_turn
-            local text
-            if player_id == 2 then
-                text = "LEFT BOT'S TURN"
-            elseif player_id == 3 then
-                text = "RIGHT BOT'S TURN"
-            else
-                text = "PLAYER " .. tostring(player_id) .. "'S TURN"
-            end
-            show_message(text)
+            text = "PLAYER " .. tostring(player_id) .. " PASSED"
         end
+        show_message(text)
     elseif message_id == hash("must_pass") then
         show_message("NO PLAYABLE CARDS")
         self.pass_button:set_enabled(true)
+    elseif message_id == hash("game_started") then
+        -- ... (existing game_started code)
     elseif message_id == hash("game_over") then
         self.pass_button:set_enabled(false)
+        local button_node = gui.get_node("pass_button")
+        gui.set_enabled(button_node, false)
+        local msg_node = gui.get_node("turn_message")
+        gui.set_enabled(msg_node, false)
     end
 end

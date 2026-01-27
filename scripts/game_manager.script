@@ -37,7 +37,7 @@ end
 -- Update Z-positions for all cards in a suit based on rank
 local function update_suit_z_positions(self, suit)
     local base_z = 0.5
-    local z_step = 0.02
+    local z_step = 0.01
 
     local suit_cards = {}
     for _, card in ipairs(self.cards_on_table) do
@@ -47,24 +47,22 @@ local function update_suit_z_positions(self, suit)
     end
 
     for _, card in ipairs(suit_cards) do
-        -- The further from 7, the lower the z-index
-        local z_offset = math.abs(card.rank - 7)
-        local new_z = base_z - (z_offset * z_step)
+    -- We use (7 - card.rank) so that:
+    -- If rank is 6: (7 - 6) = 1
+    -- If rank is 7: (7 - 7) = 0
+    -- If rank is 8: (7 - 8) = -1
+    local rank_diff = 7 - card.rank
+    
+    -- Multiply the difference by your step (0.005)
+    -- and add it to the base_z (0.500)
+    local new_z = base_z + (rank_diff * 0.005)
 
-        -- Tie-break for cards equidistant from 7 (e.g., 6 and 8)
-        -- Push the lower-rank card slightly further back
-        if card.rank < 7 then
-            new_z = new_z - (z_step / 2)
-        end
-
-
-        -- Update the card's z-position
-        local current_pos = go.get_position(card.id)
-        go.set_position(vmath.vector3(current_pos.x, current_pos.y, new_z), card.id)
-
-        -- Update the z_index in our tracking table
-        card.z_index = new_z
-    end
+    -- Update the card's position
+    local current_pos = go.get_position(card.id)
+    go.set_position(vmath.vector3(current_pos.x, current_pos.y, new_z), card.id)
+    
+    card.z_index = new_z
+end
 end
 
 
@@ -173,7 +171,7 @@ function start_turn(self, player_id)
             end
             advance_turn(self)
         end
-        returnhhhhhhhh
+        return
     end
 
     -- Reset pass status if they have playable cards
@@ -249,9 +247,10 @@ function trigger_ai_turn(self, player_id)
             local card_to_play = playable_cards[math.random(1, #playable_cards)]
             process_ai_move(self, player_id, card_to_play)
         else
-            -- AI must pass
-            print("AI Player", player_id, "passes (no playable cards)")
+            print("AI Player", player_id, "passes")
             self.player_states[player_id].passed_this_round = true
+            -- ADD THIS LINE BELOW:
+            msg.post("/turn_ui#turn", "bot_passed", { player_id = player_id })
 
             if all_players_passed(self) then
                 end_game(self, nil)
@@ -278,10 +277,12 @@ function process_ai_move(self, player_id, card_str)
         is_draggable = false,
         owner = player_id
     })
-
+    snap_pos.z = 0.5
     -- Animate to position (Z will be 0 from snap_pos, then corrected)
     go.animate(card, "position", go.PLAYBACK_ONCE_FORWARD,
-        snap_pos, go.EASING_OUTQUAD, 0.3)
+        snap_pos, go.EASING_OUTQUAD, 0.3, 0, function ()
+            update_suit_z_positions(self, suit)
+        end)
 
     -- Register the move with game logic
     local success, _ = self.logic.request_move(player_id, card_str)

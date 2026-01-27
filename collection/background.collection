@@ -13,7 +13,7 @@ embedded_instances {
   "}\\n"
   "\"\n"
   "  position {\n"
-  "    z: -0.1\n"
+  "    z: -1.0\n"
   "  }\n"
   "}\n"
   ""
